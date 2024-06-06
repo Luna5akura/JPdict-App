@@ -19,7 +19,7 @@ impl Default for DictionaryApp {
 impl App for DictionaryApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("Japanese Dictionary Search");
+            ui.heading("Japanese Dictionary Search测试");
 
             ui.text_edit_singleline(&mut self.query)
                 .on_hover_text("Enter search query");

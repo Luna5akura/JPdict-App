@@ -25,20 +25,22 @@ pub fn init_db() -> Result<()> {
 }
 
 pub fn populate_db() -> Result<()> {
+    println!("Current working directory: {:?}", std::env::current_dir());
+
     let mut conn = Connection::open("dictionary.db")?;
     let tx = conn.transaction()?;
 
-
+    // println!("Populating database...");
     // for i in 1..=34 {
     for i in 1..=2 {
         // let filename = format!("assets/new_term_bank_{}.json", i);
-        let filename = format!("assets/test_term_bank_{}.json", i);
+        let filename = format!("../assets/test_term_bank_{}.json", i);
         let data = fs::read_to_string(&filename)
             .map_err(|e| rusqlite::Error::SqliteFailure(
                 rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_ERROR),
                 Some(e.to_string())
             ))?;
-
+        // println!("Reading {}", filename);
         let entries: Vec<DictionaryEntry> = serde_json::from_str(&data)
             .map_err(|e| rusqlite::Error::SqliteFailure(
                 rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_ERROR),
