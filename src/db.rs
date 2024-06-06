@@ -30,17 +30,14 @@ pub fn populate_db() -> Result<()> {
     let mut conn = Connection::open("dictionary.db")?;
     let tx = conn.transaction()?;
 
-    // println!("Populating database...");
-    // for i in 1..=34 {
     for i in 1..=2 {
-        // let filename = format!("assets/new_term_bank_{}.json", i);
         let filename = format!("../assets/test_term_bank_{}.json", i);
         let data = fs::read_to_string(&filename)
             .map_err(|e| rusqlite::Error::SqliteFailure(
                 rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_ERROR),
                 Some(e.to_string())
             ))?;
-        // println!("Reading {}", filename);
+
         let entries: Vec<DictionaryEntry> = serde_json::from_str(&data)
             .map_err(|e| rusqlite::Error::SqliteFailure(
                 rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_ERROR),
@@ -50,7 +47,7 @@ pub fn populate_db() -> Result<()> {
         for entry in entries {
             if !entry.word.is_empty() {
                 tx.execute(
-                    "INSERT INTO dictionary (word, reading, pos, inflection, freq, translations, sequence, tags, pronunciation)
+                    "INSERT OR IGNORE INTO dictionary (word, reading, pos, inflection, freq, translations, sequence, tags, pronunciation)
                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
                     params![
                         entry.word,
@@ -75,6 +72,7 @@ pub fn populate_db() -> Result<()> {
     tx.commit()?;
     Ok(())
 }
+
 
 pub fn search_db(query: &str) -> Result<Vec<DictionaryEntry>> {
     println!("Sending query: {}", query);

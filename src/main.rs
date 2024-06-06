@@ -4,7 +4,7 @@ mod ui;
 mod db;
 mod dictionary;
 
-use eframe::{run_native, NativeOptions};
+use eframe::{run_native, NativeOptions, CreationContext};
 use ui::DictionaryApp;
 use db::{init_db, populate_db};
 
@@ -16,6 +16,6 @@ fn main() {
     run_native(
         "Dictionary App",
         native_options,
-        Box::new(|_| Box::new(DictionaryApp::default())),
+        Box::new(|cc: &CreationContext| Box::new(DictionaryApp::new(cc))),
     );
 }
