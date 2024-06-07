@@ -38,7 +38,8 @@ pub fn populate_db() -> Result<()> {
     let tx = conn.transaction()?;
 
     for i in 1..=34 {
-        let filename = format!("../assets/new_term_bank_{}.json", i);
+        let filename = format!("assets/new_term_bank_{}.json", i);
+        // TODO:Directory change
         let data = fs::read_to_string(&filename).map_err(|e| {
             rusqlite::Error::SqliteFailure(rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_ERROR), Some(e.to_string()))
         })?;
