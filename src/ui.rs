@@ -2,7 +2,7 @@
 
 /// jpdict/src/ui.rs
 
-use eframe::{egui, epaint, App, Frame};
+use eframe::{egui, App, Frame};
 use crate::dictionary::DictionaryEntry;
 use crate::db::search_db;
 
@@ -13,7 +13,6 @@ pub struct DictionaryApp {
 
 impl DictionaryApp {
     pub(crate) fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        // 加载全局字体
         load_global_font(&cc.egui_ctx);
         DictionaryApp::default()
     }
@@ -38,7 +37,7 @@ impl App for DictionaryApp {
 
             if ui.button("Search").clicked() {
                 println!("Searching for: {}", self.query);
-                match search_db(&self.query) {
+                match search_db(&self.query, 0, 20) {
                     Ok(results) => {
                         self.search_results = results;
                         println!("Found {} results", self.search_results.len());
@@ -65,7 +64,6 @@ impl App for DictionaryApp {
 }
 
 
-/// 全局加载支持中文的字体
 pub fn load_global_font(ctx: &egui::Context) {
     let mut fonts = eframe::egui::FontDefinitions::default();
 

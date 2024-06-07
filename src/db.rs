@@ -24,10 +24,16 @@ pub fn init_db() -> Result<()> {
     Ok(())
 }
 
+
 pub fn populate_db() -> Result<()> {
     println!("Current working directory: {:?}", std::env::current_dir());
 
     let mut conn = Connection::open("dictionary.db")?;
+    let count: i64 = conn.query_row("SELECT COUNT(*) FROM dictionary", [], |row| row.get(0))?;
+    if count > 0 {
+        println!("Database already populated. Skipping data insertion.");
+        return Ok(());
+    }
     let tx = conn.transaction()?;
 
     for i in 1..=2 {
@@ -73,15 +79,44 @@ pub fn populate_db() -> Result<()> {
     Ok(())
 }
 
+fn calculate_score(entry: &DictionaryEntry, word: &str) -> i32 {
+    let mut score = 0;
+    let word_lower = word.to_lowercase();
 
-pub fn search_db(query: &str) -> Result<Vec<DictionaryEntry>> {
+    if entry.word.starts_with(word) { score += 15; }
+    if entry.reading.starts_with(word) { score += 15; }
+    if entry.pos.starts_with(word) { score += 15; } // Assuming pos is used for romaji
+    if entry.pronunciation.starts_with(word) { score += 15; }
+
+    if entry.word == word { score += 10; }
+    if entry.reading == word { score += 10; }
+    if entry.pos == word { score += 10; } // Assuming pos is used for romaji
+    if entry.pronunciation == word { score += 10; }
+
+    if entry.word.contains(word) { score += 5; }
+    if entry.reading.contains(word) { score += 5; }
+    if entry.pos.contains(word) { score += 5; } // Assuming pos is used for romaji
+    if entry.pronunciation.contains(word) { score += 5; }
+
+    for meaning in &entry.translations {
+        if meaning.to_lowercase() == word_lower { score += 3; }
+        if meaning.to_lowercase().contains(&word_lower) { score += 1; }
+    }
+
+    score
+}
+
+pub fn search_db(query: &str, page: usize, limit: usize) -> Result<Vec<DictionaryEntry>> {
     println!("Sending query: {}", query);
+    if query.trim().is_empty() {
+        return Ok(Vec::new());
+    }
 
     let conn = Connection::open("dictionary.db")?;
     let mut stmt = conn.prepare(
         "SELECT word, reading, pos, inflection, freq, translations, sequence, tags, pronunciation
         FROM dictionary
-        WHERE word LIKE ?1 OR reading LIKE ?1",
+        WHERE word LIKE ?1 OR reading LIKE ?1 OR translations LIKE ?1 OR pronunciation LIKE ?1",
     )?;
 
     let rows = stmt.query_map([format!("%{}%", query)], |row| {
@@ -102,11 +137,31 @@ pub fn search_db(query: &str) -> Result<Vec<DictionaryEntry>> {
         })
     })?;
 
-    let entries: Result<Vec<_>> = rows.collect();
-    if let Ok(ref entries) = entries {
-        println!("Received {} results", entries.len());
-    } else if let Err(ref err) = entries {
-        println!("Error occurred while searching: {:?}", err);
-    }
-    entries
+    let mut entries: Vec<DictionaryEntry> = rows.filter_map(|res| res.ok()).collect();
+
+    // Calculate scores
+    let mut scored_entries: Vec<(i32, DictionaryEntry)> = entries.iter_mut()
+        .map(|entry| {
+            let score = calculate_score(entry, query);
+            (score, entry.clone())
+        })
+        .filter(|(score, _)| *score > 0)
+        .collect();
+
+    // Sort entries by score and frequency
+    scored_entries.sort_by(|a, b| {
+        b.0.cmp(&a.0).then_with(|| b.1.freq.cmp(&a.1.freq))
+    });
+
+    // Pagination
+    let total_entries = scored_entries.len();
+    let total_pages = (total_entries + limit - 1) / limit;
+    let start = page * limit;
+    let end = (start + limit).min(total_entries);
+    let paginated_results: Vec<DictionaryEntry> = scored_entries[start..end]
+        .iter()
+        .map(|(_, entry)| entry.clone())
+        .collect();
+
+    Ok(paginated_results)
 }

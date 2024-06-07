@@ -17,5 +17,5 @@ fn main() {
         "Dictionary App",
         native_options,
         Box::new(|cc: &CreationContext| Box::new(DictionaryApp::new(cc))),
-    );
+    ).expect("TODO: panic message");
 }

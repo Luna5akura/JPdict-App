@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+#[derive(Clone)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DictionaryEntry {
     pub word: String,
