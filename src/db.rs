@@ -2,6 +2,7 @@
 
 use rusqlite::{Connection, Result, params};
 use crate::dictionary::DictionaryEntry;
+use serde_json::Value;
 use std::fs;
 
 pub fn init_db() -> Result<()> {
@@ -36,42 +37,64 @@ pub fn populate_db() -> Result<()> {
     }
     let tx = conn.transaction()?;
 
-    for i in 1..=2 {
-        let filename = format!("../assets/test_term_bank_{}.json", i);
-        let data = fs::read_to_string(&filename)
-            .map_err(|e| rusqlite::Error::SqliteFailure(
-                rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_ERROR),
-                Some(e.to_string())
-            ))?;
+    for i in 1..=34 {
+        let filename = format!("../assets/new_term_bank_{}.json", i);
+        let data = fs::read_to_string(&filename).map_err(|e| {
+            rusqlite::Error::SqliteFailure(rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_ERROR), Some(e.to_string()))
+        })?;
 
-        let entries: Vec<DictionaryEntry> = serde_json::from_str(&data)
-            .map_err(|e| rusqlite::Error::SqliteFailure(
-                rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_ERROR),
-                Some(e.to_string())
-            ))?;
+        let json_value: Value = match serde_json::from_str(&data) {
+            Ok(value) => value,
+            Err(e) => {
+                println!("Error parsing JSON from file {}: {}", filename, e);
+                continue; // Skip the file if JSON parsing fails
+            }
+        };
 
-        for entry in entries {
-            if !entry.word.is_empty() {
-                tx.execute(
+        if let Some(entries) = json_value.as_array() {
+            for entry_value in entries {
+                let entry: DictionaryEntry = match serde_json::from_value(entry_value.clone()) {
+                    //TODO: map
+                    Ok(entry) => entry,
+                    Err(e) => {
+                        println!("Error parsing entry in file {}: {}", filename, e);
+                        continue; // Skip this entry if parsing fails
+                    }
+                };
+
+                if entry.word.is_empty() {
+                    continue; // Skip entries with empty words
+                }
+
+                let translations = match serde_json::to_string(&entry.translations) {
+                    Ok(trans) => trans,
+                    Err(e) => {
+                        println!("Error serializing translations for word {}: {}", entry.word, e);
+                        continue; // Skip this entry if serialization fails
+                    }
+                };
+
+                if let Err(e) = tx.execute(
                     "INSERT OR IGNORE INTO dictionary (word, reading, pos, inflection, freq, translations, sequence, tags, pronunciation)
-                    VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
                     params![
                         entry.word,
                         entry.reading,
                         entry.pos,
                         entry.inflection.unwrap_or_default(),
                         entry.freq as i32,
-                        serde_json::to_string(&entry.translations)
-                            .map_err(|e| rusqlite::Error::SqliteFailure(
-                                rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_ERROR),
-                                Some(e.to_string())
-                            ))?,
+                        translations,
                         entry.sequence as i32,
                         entry.tags.unwrap_or_default(),
                         entry.pronunciation,
                     ],
-                )?;
+                ) {
+                    println!("Error inserting entry for word {}: {}", entry.word, e);
+                    // Skip this entry if insertion fails
+                }
             }
+        } else {
+            println!("Error: expected an array of entries in file {}", filename);
         }
     }
 
@@ -79,30 +102,32 @@ pub fn populate_db() -> Result<()> {
     Ok(())
 }
 
+
 fn calculate_score(entry: &DictionaryEntry, word: &str) -> i32 {
     let mut score = 0;
     let word_lower = word.to_lowercase();
 
-    if entry.word.starts_with(word) { score += 15; }
-    if entry.reading.starts_with(word) { score += 15; }
-    if entry.pos.starts_with(word) { score += 15; } // Assuming pos is used for romaji
-    if entry.pronunciation.starts_with(word) { score += 15; }
+    if entry.word.starts_with(word) { score += 150; }
+    if entry.reading.starts_with(word) { score += 150; }
+    if entry.pos.starts_with(word) { score += 150; } // Assuming pos is used for romaji
+    if entry.pronunciation.starts_with(word) { score += 150; }
 
-    if entry.word == word { score += 10; }
-    if entry.reading == word { score += 10; }
-    if entry.pos == word { score += 10; } // Assuming pos is used for romaji
-    if entry.pronunciation == word { score += 10; }
+    if entry.word == word { score += 500; }
+    if entry.reading == word { score += 500; }
+    if entry.pos == word { score += 500; } // Assuming pos is used for romaji
+    if entry.pronunciation == word { score += 500; }
 
-    if entry.word.contains(word) { score += 5; }
-    if entry.reading.contains(word) { score += 5; }
-    if entry.pos.contains(word) { score += 5; } // Assuming pos is used for romaji
-    if entry.pronunciation.contains(word) { score += 5; }
+    if entry.word.contains(word) { score += 50; }
+    if entry.reading.contains(word) { score += 50; }
+    if entry.pos.contains(word) { score += 50; } // Assuming pos is used for romaji
+    if entry.pronunciation.contains(word) { score += 50; }
 
     for meaning in &entry.translations {
-        if meaning.to_lowercase() == word_lower { score += 3; }
-        if meaning.to_lowercase().contains(&word_lower) { score += 1; }
+        if meaning.to_lowercase() == word_lower { score += 30; }
+        if meaning.to_lowercase().contains(&word_lower) { score += 10; }
     }
-
+    let freq_exp = (entry.freq as f64).exp();
+    score += (10.0 * freq_exp / (1.0 + freq_exp)).round() as i32;
     score
 }
 
