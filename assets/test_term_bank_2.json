@@ -13,16 +13,33 @@
     "atsuisensō"
   ],
   [
-    "服姿",
-    "ふくすがた",
-    "n",
+    "アッとゆう間に",
     "",
-    -200,
+    "",
+    "",
+    -5050000,
     [
-      "(organizational) uniform"
+      {
+        "content": {
+          "content": [
+            "⟶",
+            {
+              "content": "あっという間に",
+              "href": "?query=あっという間に&wildcards=off",
+              "lang": "ja",
+              "tag": "a"
+            }
+          ],
+          "style": {
+            "fontSize": "130%"
+          },
+          "tag": "span"
+        },
+        "type": "structured-content"
+      }
     ],
-    2061380,
+    -1000390,
     "",
-    "fukusugata"
+    ""
   ]
 ]
