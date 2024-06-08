@@ -36,8 +36,10 @@ pub fn populate_db() -> Result<()> {
         return Ok(());
     }
     let tx = conn.transaction()?;
-
+    println!("Populating database...");
     for i in 1..=34 {
+        println!("Processing file {}...", i);
+
         let filename = format!("assets/new_term_bank_{}.json", i);
         // TODO:Directory change
         let data = fs::read_to_string(&filename).map_err(|e| {
