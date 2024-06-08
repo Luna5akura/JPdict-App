@@ -57,9 +57,11 @@ impl App for DictionaryApp {
 
         egui::CentralPanel::default().frame(egui::Frame::window(&ctx.style()).fill(egui::Color32::from_rgb(240, 240, 240))).show(ctx, |ui| {
             ui.vertical_centered(|ui| {
+
                 ui.heading("Japanese Dictionary Search");
                 ui.separator();
 
+                // TODO:centered
                 egui::Frame::none().fill(egui::Color32::from_rgb(250, 250, 250)).show(ui, |ui| {
                     self.render_search_bar(ui);
                 });
@@ -77,7 +79,8 @@ impl App for DictionaryApp {
 
 impl DictionaryApp {
     fn render_search_bar(&mut self, ui: &mut egui::Ui) {
-        ui.vertical_centered(|ui| {
+        ui.horizontal(|ui| {
+
             let search_response = ui.text_edit_singleline(&mut self.query);
 
             if ui.button("Search").clicked() || search_response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
@@ -123,18 +126,21 @@ impl DictionaryApp {
 
                 ui.style_mut().override_text_style = Some(egui::TextStyle::Body);
 
-                ui.horizontal(|ui| {
+                ui.vertical(|ui| {
                     ui.label(egui::RichText::new(&entry.word).size(40.0).strong()).on_hover_text(format!("Pronunciation: {}", entry.pronunciation));
-                    ui.label(format!("【{}】", &entry.reading));
+
+                    ui.label(egui::RichText::new(format!("【{}】", &entry.reading)).size(20.0));
                 });
 
                 ui.add_space(5.0);
 
                 ui.horizontal(|ui| {
-                    ui.label(egui::RichText::new(format!("{}", entry.pos)).color(egui::Color32::LIGHT_BLUE));
+                    ui.label(egui::RichText::new(format!("{}", entry.pos))
+                        .size(15.0).strong().color(egui::Color32::BLUE));
 
                     if let Some(infl) = &entry.inflection {
-                        ui.label(egui::RichText::new(format!("({})", infl)).color(egui::Color32::LIGHT_GREEN));
+                        ui.label(egui::RichText::new(format!("({})", infl))
+                            .size(15.0).strong().color(egui::Color32::DARK_GREEN));
                     }
 
                     if let Some(tags) = &entry.tags {
@@ -142,6 +148,7 @@ impl DictionaryApp {
                             for tag in tags.split(' ') {
                                 ui.label(
                                     egui::RichText::new(tag)
+                                        .size(15.0).strong()
                                         .background_color(egui::Color32::from_rgb(224, 240, 255))
                                         .color(egui::Color32::from_rgb(0, 123, 255))
                                 ).on_hover_text("Tag explanation here");
@@ -153,10 +160,10 @@ impl DictionaryApp {
 
                 ui.add_space(10.0);
 
-                ui.label("Translations:");
                 ui.vertical(|ui| {
+                    ui.label(egui::RichText::new("Translations:").size(20.0).strong());
                     for tran in &entry.translations {
-                        ui.label(format!("- {}", tran));
+                        ui.label(egui::RichText::new(format!("- {}", tran)).size(15.0));
                     }
                 });
             });
