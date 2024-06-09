@@ -1,6 +1,7 @@
 /// jpdict/src/ui.rs
 
 use eframe::{egui, App, Frame};
+use eframe::egui::Vec2;
 use crate::dictionary::DictionaryEntry;
 use crate::db::search_db;
 
@@ -104,10 +105,11 @@ impl App for DictionaryApp {
 impl DictionaryApp {
     fn render_search_bar(&mut self, ui: &mut egui::Ui) {
         let mut search_triggered = false;
+        ui.add_space(10.0);
 
         ui.horizontal(|ui| {
             let total_width = ui.available_width();
-            let element_width = 300.0 + 80.0 + 40.0;
+            let element_width = 10.0 + 300.0 + 10.0 + 100.0 + 10.0 + 40.0 + 10.0;
             let remaining_space = total_width - element_width;
             let side_space = remaining_space / 2.0;
 
@@ -118,7 +120,7 @@ impl DictionaryApp {
                     .font(egui::TextStyle::Body)
                     .frame(true)
                     .desired_width(300.0)
-                    .margin(egui::vec2(10.0, 10.0))
+                    .margin(egui::vec2(15.0, 10.0))
             );
 
             if ui.add_sized(
@@ -129,7 +131,7 @@ impl DictionaryApp {
                 search_triggered = true;
             }
 
-            if ui.add_sized([60.0, 35.0], egui::Button::new(
+            if ui.add_sized([40.0, 35.0], egui::Button::new(
                 egui::RichText::new("×").size(FONT_SIZE_MEDIUM)
             )).clicked() {
                 self.query.clear();
@@ -137,6 +139,8 @@ impl DictionaryApp {
 
             ui.add_space(side_space);
         });
+
+        ui.add_space(10.0);
 
         if search_triggered {
             match search_db(&self.query, 0, 20) {
@@ -152,6 +156,7 @@ impl DictionaryApp {
     }
 
     fn render_search_results(&self, ui: &mut egui::Ui) {
+        ui.add_space(10.0);
         ui.label(format!("Found {} results:", self.search_results.len()));
         ui.add_space(10.0);
 
@@ -159,7 +164,19 @@ impl DictionaryApp {
             .auto_shrink([false, false])
             .show(ui, |ui| {
                 for (i, entry) in self.search_results.iter().enumerate() {
-                    egui::Frame::none().fill(self.bg_colors[i % self.bg_colors.len()]).show(ui, |ui| {
+                    egui::Frame::none()
+                        .fill(self.bg_colors[i % self.bg_colors.len()])
+                        .rounding(egui::Rounding::same(20.0))
+                        .stroke(egui::Stroke::new(1.0, OUTLINE_DARK_GRAY))
+                        .inner_margin(egui::vec2(10.0, 10.0))
+                        .shadow(egui::epaint::Shadow {
+                            offset: egui::vec2(6.0, 6.0),
+                            blur: 5.0,
+                            color: egui::Color32::from_black_alpha(30),
+                            spread: 0.0,
+                        })
+                        .show(ui, |ui| {
+
                         self.render_search_result_item(ui, entry, i);
                     });
                     ui.add_space(20.0);
@@ -171,52 +188,49 @@ impl DictionaryApp {
 
     fn render_search_result_item(&self, ui: &mut egui::Ui, entry: &DictionaryEntry, index: usize) {
         ui.vertical_centered(|ui| {
-            ui.group(|ui| {
-                ui.set_width(600.0);
+            ui.set_width(600.0);
 
-                ui.style_mut().override_text_style = Some(egui::TextStyle::Body);
+            ui.vertical(|ui| {
+                ui.label(egui::RichText::new(&entry.word).size(FONT_SIZE_LARGE).strong()).on_hover_text(format!("Pronunciation: {}", entry.pronunciation));
+                ui.label(egui::RichText::new(format!("【{}】", &entry.reading)).size(FONT_SIZE_MEDIUM));
+            });
 
-                ui.vertical(|ui| {
-                    ui.label(egui::RichText::new(&entry.word).size(FONT_SIZE_LARGE).strong()).on_hover_text(format!("Pronunciation: {}", entry.pronunciation));
+            ui.add_space(5.0);
 
-                    ui.label(egui::RichText::new(format!("【{}】", &entry.reading)).size(FONT_SIZE_MEDIUM));
-                });
+            ui.horizontal(|ui| {
+                ui.label(egui::RichText::new(format!("{}", entry.pos))
+                    .size(15.0).strong().color(PROPERTY_COLOR_BLUE));
 
-                ui.add_space(5.0);
+                if let Some(infl) = &entry.inflection {
+                    ui.label(egui::RichText::new(format!("({})", infl))
+                        .size(15.0).strong().color(ADDITION_COLOR_DARKGREEN));
+                }
 
-                ui.horizontal(|ui| {
-                    ui.label(egui::RichText::new(format!("{}", entry.pos))
-                        .size(15.0).strong().color(PROPERTY_COLOR_BLUE));
+                if let Some(tags) = &entry.tags {
+                    ui.horizontal_wrapped(|ui| {
+                        for tag in tags.split(' ') {
+                            ui.label(
+                                egui::RichText::new(tag)
+                                    .size(FONT_SIZE_SMALL).strong()
+                                    .background_color(TAG_BACKGROUND_LIGHT_BLUE)
+                                    .color(TAG_COLOR_BLUE)
+                            ).on_hover_text("Tag explanation here");
+                            ui.add_space(5.0);
+                        }
+                    });
+                }
+            }).response.on_hover_text(format!("Frequency: {}", entry.freq));
 
-                    if let Some(infl) = &entry.inflection {
-                        ui.label(egui::RichText::new(format!("({})", infl))
-                            .size(15.0).strong().color(ADDITION_COLOR_DARKGREEN));
-                    }
+            ui.add_space(10.0);
 
-                    if let Some(tags) = &entry.tags {
-                        ui.horizontal_wrapped(|ui| {
-                            for tag in tags.split(' ') {
-                                ui.label(
-                                    egui::RichText::new(tag)
-                                        .size(FONT_SIZE_SMALL).strong()
-                                        .background_color(TAG_BACKGROUND_LIGHT_BLUE)
-                                        .color(TAG_COLOR_BLUE)
-                                ).on_hover_text("Tag explanation here");
-                                ui.add_space(5.0);
-                            }
-                        });
-                    }
-                }).response.on_hover_text(format!("Frequency: {}", entry.freq));
-
-                ui.add_space(10.0);
-
-                ui.vertical(|ui| {
-                    ui.label(egui::RichText::new("Translations:").size(FONT_SIZE_MEDIUM).strong());
-                    for tran in &entry.translations {
-                        ui.label(egui::RichText::new(format!("- {}", tran)).size(FONT_SIZE_SMALL));
-                    }
-                });
+            ui.vertical(|ui| {
+                // ui.label(egui::RichText::new("Translations:").size(FONT_SIZE_MEDIUM).strong());
+                for tran in &entry.translations {
+                    ui.label(egui::RichText::new(format!("- {}", tran)).size(FONT_SIZE_MEDIUM).strong());
+                    // ui.label(egui::RichText::new(format!("- {}", tran)).size(FONT_SIZE_SMALL));
+                }
             });
         });
     }
+
 }
