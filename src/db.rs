@@ -36,8 +36,10 @@ pub fn populate_db() -> Result<()> {
         return Ok(());
     }
     let tx = conn.transaction()?;
-
+    println!("Populating database...");
     for i in 1..=34 {
+        println!("Processing file {}...", i);
+
         let filename = format!("assets/new_term_bank_{}.json", i);
         // TODO:Directory change
         let data = fs::read_to_string(&filename).map_err(|e| {
@@ -127,8 +129,7 @@ fn calculate_score(entry: &DictionaryEntry, word: &str) -> i32 {
         if meaning.to_lowercase() == word_lower { score += 30; }
         if meaning.to_lowercase().contains(&word_lower) { score += 10; }
     }
-    let freq_exp = (entry.freq as f64).exp();
-    score += (10.0 * freq_exp / (1.0 + freq_exp)).round() as i32;
+
     score
 }
 
@@ -188,6 +189,6 @@ pub fn search_db(query: &str, page: usize, limit: usize) -> Result<Vec<Dictionar
         .iter()
         .map(|(_, entry)| entry.clone())
         .collect();
-
+    println!("Found {:?}", paginated_results);
     Ok(paginated_results)
 }
