@@ -112,17 +112,14 @@ fn calculate_score(entry: &DictionaryEntry, word: &str) -> i32 {
 
     if entry.word.starts_with(word) { score += 150; }
     if entry.reading.starts_with(word) { score += 150; }
-    if entry.pos.starts_with(word) { score += 150; } // Assuming pos is used for romaji
     if entry.pronunciation.starts_with(word) { score += 150; }
 
     if entry.word == word { score += 500; }
     if entry.reading == word { score += 500; }
-    if entry.pos == word { score += 500; } // Assuming pos is used for romaji
-    if entry.pronunciation == word { score += 500; }
+    if entry.pronunciation == word { score += 5000; }
 
     if entry.word.contains(word) { score += 50; }
     if entry.reading.contains(word) { score += 50; }
-    if entry.pos.contains(word) { score += 50; } // Assuming pos is used for romaji
     if entry.pronunciation.contains(word) { score += 50; }
 
     for meaning in &entry.translations {
@@ -133,20 +130,50 @@ fn calculate_score(entry: &DictionaryEntry, word: &str) -> i32 {
     score
 }
 
+fn replace_repeated_consonants(input: &str) -> String {
+    let consonants = "bcdfghjklmnpqrstvwxyz";
+    let mut result = String::new();
+    let mut chars = input.chars().peekable();
+
+    while let Some(ch) = chars.next() {
+        if consonants.contains(ch) {
+            if let Some(&next_ch) = chars.peek() {
+                if ch == next_ch {
+                    result.push_str("tsu");
+                    result.push(ch);
+                    chars.next();
+                    continue;
+                }
+            }
+        }
+        result.push(ch);
+    }
+
+    result
+}
+
 pub fn search_db(query: &str, page: usize, limit: usize) -> Result<Vec<DictionaryEntry>> {
     println!("Sending query: {}", query);
     if query.trim().is_empty() {
         return Ok(Vec::new());
     }
+    let query = query.to_lowercase();
+    let query : &str = query.as_str();
+
+    // let romaji_query = replace_repeated_consonants(&query);
+    // println!("Sending romaji query: {}", romaji_query);
 
     let conn = Connection::open("dictionary.db")?;
     let mut stmt = conn.prepare(
         "SELECT word, reading, pos, inflection, freq, translations, sequence, tags, pronunciation
         FROM dictionary
         WHERE word LIKE ?1 OR reading LIKE ?1 OR translations LIKE ?1 OR pronunciation LIKE ?1",
+
     )?;
 
     let rows = stmt.query_map([format!("%{}%", query)], |row| {
+
+    // let rows = stmt.query_map([format!("%{}%", query), format!("%{}%", romaji_query)], |row| {
         Ok(DictionaryEntry {
             word: row.get(0)?,
             reading: row.get(1)?,
@@ -175,6 +202,7 @@ pub fn search_db(query: &str, page: usize, limit: usize) -> Result<Vec<Dictionar
         .filter(|(score, _)| *score > 0)
         .collect();
 
+    println!("Found: {:?}", scored_entries);
     // Sort entries by score and frequency
     scored_entries.sort_by(|a, b| {
         b.0.cmp(&a.0).then_with(|| b.1.freq.cmp(&a.1.freq))
@@ -189,6 +217,6 @@ pub fn search_db(query: &str, page: usize, limit: usize) -> Result<Vec<Dictionar
         .iter()
         .map(|(_, entry)| entry.clone())
         .collect();
-    println!("Found {:?}", paginated_results);
+    // println!("Found {:?}", paginated_results);
     Ok(paginated_results)
 }

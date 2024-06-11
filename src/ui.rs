@@ -1,9 +1,9 @@
 /// jpdict/src/ui.rs
 
 use eframe::{egui, App, Frame};
-use eframe::egui::Vec2;
 use crate::dictionary::DictionaryEntry;
 use crate::db::search_db;
+use arboard::Clipboard;
 
 // 颜色常量
 const CARD_0_ALICE_BLUE: egui::Color32 = egui::Color32::from_rgb(240, 248, 255);
@@ -32,6 +32,8 @@ pub struct DictionaryApp {
     query: String,
     search_results: Vec<DictionaryEntry>,
     bg_colors: Vec<egui::Color32>,
+    last_clipboard_content: String,
+    selected_text: String,
 }
 
 impl DictionaryApp {
@@ -77,6 +79,8 @@ impl Default for DictionaryApp {
             query: "".to_owned(),
             search_results: Vec::new(),
             bg_colors: vec![CARD_0_ALICE_BLUE, CARD_1_ANTIQUE_WHITE, CARD_2_LAVENDER, CARD_3_MISTY_ROSE, CARD_4_AZURE, CARD_5_BEIGE],
+            last_clipboard_content: String::new(),
+            selected_text: String::new(),
         }
     }
 }
@@ -84,6 +88,15 @@ impl Default for DictionaryApp {
 impl App for DictionaryApp {
     fn update(&mut self, ctx: &egui::Context, frame: &mut Frame) {
         DictionaryApp::setup_styles(ctx);
+
+        let mut clipboard = Clipboard::new().unwrap();
+        if let Ok(new_clipboard_content) = clipboard.get_text() {
+            if new_clipboard_content != self.last_clipboard_content {
+                self.last_clipboard_content = new_clipboard_content.clone();
+                self.query = new_clipboard_content;
+                self.perform_search();
+            }
+        }
 
         egui::CentralPanel::default().frame(egui::Frame::window(&ctx.style()).fill(MAIN_LIGHT_BACKGROUND_LIGHT_GRAY)).show(ctx, |ui| {
             ui.vertical_centered(|ui| {
@@ -103,6 +116,17 @@ impl App for DictionaryApp {
 }
 
 impl DictionaryApp {
+    fn perform_search(&mut self) {
+        match search_db(&self.query, 0, 20) {
+            Ok(results) => {
+                self.search_results = results;
+                println!("Found {} results", self.search_results.len());
+            }
+            Err(e) => {
+                println!("Error occurred while searching: {:?}", e);
+            }
+        }
+    }
     fn render_search_bar(&mut self, ui: &mut egui::Ui) {
         let mut search_triggered = false;
         ui.add_space(10.0);
