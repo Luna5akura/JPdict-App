@@ -34,6 +34,7 @@ pub struct DictionaryApp {
     bg_colors: Vec<egui::Color32>,
     last_clipboard_content: String,
     selected_text: String,
+    scroll_to_top: bool,
 }
 
 impl DictionaryApp {
@@ -81,6 +82,7 @@ impl Default for DictionaryApp {
             bg_colors: vec![CARD_0_ALICE_BLUE, CARD_1_ANTIQUE_WHITE, CARD_2_LAVENDER, CARD_3_MISTY_ROSE, CARD_4_AZURE, CARD_5_BEIGE],
             last_clipboard_content: String::new(),
             selected_text: String::new(),
+            scroll_to_top: false,
         }
     }
 }
@@ -121,6 +123,7 @@ impl DictionaryApp {
             Ok(results) => {
                 self.search_results = results;
                 println!("Found {} results", self.search_results.len());
+                self.scroll_to_top = true; // 重置滚动条
             }
             Err(e) => {
                 println!("Error occurred while searching: {:?}", e);
@@ -167,19 +170,11 @@ impl DictionaryApp {
         ui.add_space(10.0);
 
         if search_triggered {
-            match search_db(&self.query, 0, 20) {
-                Ok(results) => {
-                    self.search_results = results;
-                    println!("Found {} results", self.search_results.len());
-                }
-                Err(e) => {
-                    println!("Error occurred while searching: {:?}", e);
-                }
-            }
+            self.perform_search()
         }
     }
 
-    fn render_search_results(&self, ui: &mut egui::Ui) {
+    fn render_search_results(&mut self, ui: &mut egui::Ui) {
         ui.add_space(10.0);
         ui.label(format!("Found {} results:", self.search_results.len()));
         ui.add_space(10.0);
@@ -187,6 +182,11 @@ impl DictionaryApp {
         egui::ScrollArea::vertical()
             .auto_shrink([false, false])
             .show(ui, |ui| {
+                if self.scroll_to_top {
+                    ui.scroll_to_cursor(Some(egui::Align::Min)); // 滚动到顶部
+                    self.scroll_to_top = false; // 重置状态
+                }
+
                 for (i, entry) in self.search_results.iter().enumerate() {
                     egui::Frame::none()
                         .fill(self.bg_colors[i % self.bg_colors.len()])
