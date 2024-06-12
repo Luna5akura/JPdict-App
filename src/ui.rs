@@ -5,7 +5,6 @@ use crate::dictionary::DictionaryEntry;
 use crate::db::search_db;
 use arboard::Clipboard;
 
-// 颜色常量
 const CARD_0_ALICE_BLUE: egui::Color32 = egui::Color32::from_rgb(240, 248, 255);
 const CARD_1_ANTIQUE_WHITE: egui::Color32 = egui::Color32::from_rgb(250, 235, 215);
 const CARD_2_LAVENDER: egui::Color32 = egui::Color32::from_rgb(230, 230, 250);
@@ -28,6 +27,11 @@ const FONT_SIZE_LARGE: f32 = 40.0;
 const FONT_SIZE_MEDIUM: f32 = 20.0;
 const FONT_SIZE_SMALL: f32 = 15.0;
 
+enum SearchPrompt {
+    Query,
+    SelectedText,
+}
+
 pub struct DictionaryApp {
     query: String,
     search_results: Vec<DictionaryEntry>,
@@ -35,6 +39,7 @@ pub struct DictionaryApp {
     last_clipboard_content: String,
     selected_text: String,
     scroll_to_top: bool,
+    previous_char_range: Option<egui::text::CCursorRange>,
 }
 
 impl DictionaryApp {
@@ -83,6 +88,7 @@ impl Default for DictionaryApp {
             last_clipboard_content: String::new(),
             selected_text: String::new(),
             scroll_to_top: false,
+            previous_char_range: None,
         }
     }
 }
@@ -96,7 +102,7 @@ impl App for DictionaryApp {
             if new_clipboard_content != self.last_clipboard_content {
                 self.last_clipboard_content = new_clipboard_content.clone();
                 self.query = new_clipboard_content;
-                self.perform_search();
+                self.perform_search(SearchPrompt::Query);
             }
         }
 
@@ -118,12 +124,18 @@ impl App for DictionaryApp {
 }
 
 impl DictionaryApp {
-    fn perform_search(&mut self) {
-        match search_db(&self.query, 0, 20) {
+    fn perform_search(&mut self, prompt: SearchPrompt) {
+
+        let search_text = match prompt {
+            SearchPrompt::Query => &self.query,
+            SearchPrompt::SelectedText => &self.selected_text,
+        };
+
+        match search_db(search_text, 0, 20) {
             Ok(results) => {
                 self.search_results = results;
                 println!("Found {} results", self.search_results.len());
-                self.scroll_to_top = true; // 重置滚动条
+                self.scroll_to_top = true;
             }
             Err(e) => {
                 println!("Error occurred while searching: {:?}", e);
@@ -132,6 +144,8 @@ impl DictionaryApp {
     }
     fn render_search_bar(&mut self, ui: &mut egui::Ui) {
         let mut search_triggered = false;
+        let mut selection_changed = false;
+
         ui.add_space(10.0);
 
         ui.horizontal(|ui| {
@@ -142,13 +156,54 @@ impl DictionaryApp {
 
             ui.add_space(side_space);
 
-            let search_response = ui.add(
-                egui::TextEdit::singleline(&mut self.query)
-                    .font(egui::TextStyle::Body)
-                    .frame(true)
-                    .desired_width(300.0)
-                    .margin(egui::vec2(15.0, 10.0))
-            );
+            let search_bar = egui::TextEdit::singleline(&mut self.query)
+                .font(egui::TextStyle::Body)
+                .frame(true)
+                .desired_width(300.0)
+                .margin(egui::vec2(15.0, 10.0));
+
+            let search_bar_output = search_bar.show(ui);
+
+            let search_response = search_bar_output.response;
+            let search_text_cursor = search_bar_output.state.cursor;
+
+            if let Some(current_char_range) = search_text_cursor.char_range() {
+                if self.previous_char_range != Some(current_char_range) {
+                    self.previous_char_range = Some(current_char_range);
+
+                    let sorted_cursors = current_char_range.sorted();
+                    let start = sorted_cursors[0].index;
+                    let end = sorted_cursors[1].index;
+
+                    let char_indices: Vec<_> = self.query.char_indices().collect();
+                    let start_char_index = if start < char_indices.len() {
+                        char_indices[start].0
+                    } else {
+                        self.query.len()
+                    };
+
+                    let end_char_index = if end < char_indices.len() {
+                        char_indices[end].0
+                    } else {
+                        self.query.len()
+                    };
+
+                    self.selected_text = self.query[start_char_index..end_char_index].to_string();
+
+                    if !(self.selected_text.chars().all(|c| c.is_ascii_alphabetic()) && end - start < 3) {
+                        selection_changed = true;
+                    }
+
+                    println!("Selected text: {}", self.selected_text);
+                }
+            } else {
+                if self.previous_char_range.is_some() {
+                    selection_changed = true;
+                    self.previous_char_range = None;
+                    self.selected_text.clear();
+                    println!("Selection cleared")
+                }
+            }
 
             if ui.add_sized(
                 [100.0, 35.0],
@@ -168,9 +223,12 @@ impl DictionaryApp {
         });
 
         ui.add_space(10.0);
-
+        if selection_changed {
+            self.perform_search(SearchPrompt::SelectedText);
+            println!("Selection changed: {}", self.selected_text)
+        }
         if search_triggered {
-            self.perform_search()
+            self.perform_search(SearchPrompt::Query)
         }
     }
 
