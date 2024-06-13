@@ -152,7 +152,7 @@ fn replace_repeated_consonants(input: &str) -> String {
     result
 }
 
-pub fn search_db(query: &str, page: usize, limit: usize) -> Result<Vec<DictionaryEntry>> {
+pub async fn search_db(query: &str, page: usize, limit: usize) -> Result<Vec<DictionaryEntry>> {
     println!("Sending query: {}", query);
     if query.trim().is_empty() {
         return Ok(Vec::new());

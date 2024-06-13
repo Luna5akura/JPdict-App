@@ -1,11 +1,12 @@
+use std::sync::{Arc, Mutex};
 /// jpdict/src/ui.rs
 
 use eframe::{egui, App, Frame};
 use crate::dictionary::DictionaryEntry;
 use crate::db::search_db;
 use arboard::Clipboard;
+use tokio::runtime::Runtime;
 
-// 颜色常量
 const CARD_0_ALICE_BLUE: egui::Color32 = egui::Color32::from_rgb(240, 248, 255);
 const CARD_1_ANTIQUE_WHITE: egui::Color32 = egui::Color32::from_rgb(250, 235, 215);
 const CARD_2_LAVENDER: egui::Color32 = egui::Color32::from_rgb(230, 230, 250);
@@ -28,16 +29,26 @@ const FONT_SIZE_LARGE: f32 = 40.0;
 const FONT_SIZE_MEDIUM: f32 = 20.0;
 const FONT_SIZE_SMALL: f32 = 15.0;
 
+enum SearchPrompt {
+    Query,
+    SelectedText,
+}
+
 pub struct DictionaryApp {
     query: String,
-    search_results: Vec<DictionaryEntry>,
+    search_results: Arc<Mutex<Vec<DictionaryEntry>>>,
     bg_colors: Vec<egui::Color32>,
     last_clipboard_content: String,
     selected_text: String,
+    scroll_to_top: bool,
+    previous_char_range: Option<egui::text::CCursorRange>,
+    search_thread: Option<std::thread::JoinHandle<()>>,
+    runtime: Arc<Runtime>,
 }
 
 impl DictionaryApp {
     pub(crate) fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        let runtime = Runtime::new().unwrap();
         let mut fonts = eframe::egui::FontDefinitions::default();
         fonts.font_data.insert(
             FONT_NAME.to_owned(),
@@ -56,7 +67,6 @@ impl DictionaryApp {
             .unwrap()
             .push(FONT_NAME.to_owned());
         cc.egui_ctx.set_fonts(fonts);
-
         DictionaryApp::default()
     }
 
@@ -75,12 +85,17 @@ impl DictionaryApp {
 
 impl Default for DictionaryApp {
     fn default() -> Self {
+        let runtime = Runtime::new().unwrap();
         Self {
             query: "".to_owned(),
-            search_results: Vec::new(),
+            search_results: Arc::new(Mutex::new(Vec::new())),
             bg_colors: vec![CARD_0_ALICE_BLUE, CARD_1_ANTIQUE_WHITE, CARD_2_LAVENDER, CARD_3_MISTY_ROSE, CARD_4_AZURE, CARD_5_BEIGE],
             last_clipboard_content: String::new(),
             selected_text: String::new(),
+            scroll_to_top: false,
+            previous_char_range: None,
+            search_thread: None,
+            runtime: Arc::new(runtime),
         }
     }
 }
@@ -94,7 +109,7 @@ impl App for DictionaryApp {
             if new_clipboard_content != self.last_clipboard_content {
                 self.last_clipboard_content = new_clipboard_content.clone();
                 self.query = new_clipboard_content;
-                self.perform_search();
+                self.perform_search(SearchPrompt::Query);
             }
         }
 
@@ -104,7 +119,7 @@ impl App for DictionaryApp {
                     self.render_search_bar(ui);
                 });
 
-                if !self.search_results.is_empty() {
+                if !self.search_results.lock().unwrap().is_empty() {
                     ui.separator();
                     egui::Frame::none().fill(MAIN_LIGHT_BACKGROUND_LIGHT_GRAY).show(ui, |ui| {
                         self.render_search_results(ui);
@@ -116,19 +131,31 @@ impl App for DictionaryApp {
 }
 
 impl DictionaryApp {
-    fn perform_search(&mut self) {
-        match search_db(&self.query, 0, 20) {
-            Ok(results) => {
-                self.search_results = results;
-                println!("Found {} results", self.search_results.len());
+    fn perform_search(&mut self, prompt: SearchPrompt) {
+        let search_text = match prompt {
+            SearchPrompt::Query => self.query.clone(),
+            SearchPrompt::SelectedText => self.selected_text.clone(),
+        };
+
+        let search_results = self.search_results.clone();
+        let runtime = self.runtime.clone();
+
+        runtime.spawn(async move {
+            match search_db(&search_text, 0, 20).await {
+                Ok(results) => {
+                    *search_results.lock().unwrap() = results;
+                }
+                Err(e) => {
+                    println!("Error occurred while searching: {:?}", e);
+                }
             }
-            Err(e) => {
-                println!("Error occurred while searching: {:?}", e);
-            }
-        }
+        });
     }
+
     fn render_search_bar(&mut self, ui: &mut egui::Ui) {
         let mut search_triggered = false;
+        let mut selection_changed = false;
+
         ui.add_space(10.0);
 
         ui.horizontal(|ui| {
@@ -139,13 +166,54 @@ impl DictionaryApp {
 
             ui.add_space(side_space);
 
-            let search_response = ui.add(
-                egui::TextEdit::singleline(&mut self.query)
-                    .font(egui::TextStyle::Body)
-                    .frame(true)
-                    .desired_width(300.0)
-                    .margin(egui::vec2(15.0, 10.0))
-            );
+            let search_bar = egui::TextEdit::singleline(&mut self.query)
+                .font(egui::TextStyle::Body)
+                .frame(true)
+                .desired_width(300.0)
+                .margin(egui::vec2(15.0, 10.0));
+
+            let search_bar_output = search_bar.show(ui);
+
+            let search_response = search_bar_output.response;
+            let search_text_cursor = search_bar_output.state.cursor;
+
+            if let Some(current_char_range) = search_text_cursor.char_range() {
+                if self.previous_char_range != Some(current_char_range) {
+                    self.previous_char_range = Some(current_char_range);
+
+                    let sorted_cursors = current_char_range.sorted();
+                    let start = sorted_cursors[0].index;
+                    let end = sorted_cursors[1].index;
+
+                    let char_indices: Vec<_> = self.query.char_indices().collect();
+                    let start_char_index = if start < char_indices.len() {
+                        char_indices[start].0
+                    } else {
+                        self.query.len()
+                    };
+
+                    let end_char_index = if end < char_indices.len() {
+                        char_indices[end].0
+                    } else {
+                        self.query.len()
+                    };
+
+                    self.selected_text = self.query[start_char_index..end_char_index].to_string();
+
+                    if !(self.selected_text.chars().all(|c| c.is_ascii_alphabetic()) && end - start < 3) {
+                        selection_changed = true;
+                    }
+
+                    println!("Selected text: {}", self.selected_text);
+                }
+            } else {
+                if self.previous_char_range.is_some() {
+                    selection_changed = true;
+                    self.previous_char_range = None;
+                    self.selected_text.clear();
+                    println!("Selection cleared")
+                }
+            }
 
             if ui.add_sized(
                 [100.0, 35.0],
@@ -165,29 +233,29 @@ impl DictionaryApp {
         });
 
         ui.add_space(10.0);
-
+        if selection_changed {
+            self.perform_search(SearchPrompt::SelectedText);
+            println!("Selection changed: {}", self.selected_text)
+        }
         if search_triggered {
-            match search_db(&self.query, 0, 20) {
-                Ok(results) => {
-                    self.search_results = results;
-                    println!("Found {} results", self.search_results.len());
-                }
-                Err(e) => {
-                    println!("Error occurred while searching: {:?}", e);
-                }
-            }
+            self.perform_search(SearchPrompt::Query)
         }
     }
 
-    fn render_search_results(&self, ui: &mut egui::Ui) {
+    fn render_search_results(&mut self, ui: &mut egui::Ui) {
         ui.add_space(10.0);
-        ui.label(format!("Found {} results:", self.search_results.len()));
+        ui.label(format!("Found {} results:", self.search_results.lock().unwrap().len()));
         ui.add_space(10.0);
 
         egui::ScrollArea::vertical()
             .auto_shrink([false, false])
             .show(ui, |ui| {
-                for (i, entry) in self.search_results.iter().enumerate() {
+                if self.scroll_to_top {
+                    ui.scroll_to_cursor(Some(egui::Align::Min));
+                    self.scroll_to_top = false;
+                }
+                let search_results = self.search_results.lock().unwrap();
+                for (i, entry) in search_results.iter().enumerate() {
                     egui::Frame::none()
                         .fill(self.bg_colors[i % self.bg_colors.len()])
                         .rounding(egui::Rounding::same(20.0))
