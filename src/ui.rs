@@ -1,3 +1,4 @@
+use std::sync::{Arc, Mutex};
 /// jpdict/src/ui.rs
 
 use eframe::{egui, App, Frame};
@@ -34,12 +35,13 @@ enum SearchPrompt {
 
 pub struct DictionaryApp {
     query: String,
-    search_results: Vec<DictionaryEntry>,
+    search_results: Arc<Mutex<Vec<DictionaryEntry>>>,
     bg_colors: Vec<egui::Color32>,
     last_clipboard_content: String,
     selected_text: String,
     scroll_to_top: bool,
     previous_char_range: Option<egui::text::CCursorRange>,
+    search_thread: Option<std::thread::JoinHandle<()>>,
 }
 
 impl DictionaryApp {
@@ -83,12 +85,13 @@ impl Default for DictionaryApp {
     fn default() -> Self {
         Self {
             query: "".to_owned(),
-            search_results: Vec::new(),
+            search_results: Arc::new(Mutex::new(Vec::new())),
             bg_colors: vec![CARD_0_ALICE_BLUE, CARD_1_ANTIQUE_WHITE, CARD_2_LAVENDER, CARD_3_MISTY_ROSE, CARD_4_AZURE, CARD_5_BEIGE],
             last_clipboard_content: String::new(),
             selected_text: String::new(),
             scroll_to_top: false,
             previous_char_range: None,
+            search_thread: None,
         }
     }
 }
@@ -112,7 +115,7 @@ impl App for DictionaryApp {
                     self.render_search_bar(ui);
                 });
 
-                if !self.search_results.is_empty() {
+                if !self.search_results.lock().unwrap().is_empty() {
                     ui.separator();
                     egui::Frame::none().fill(MAIN_LIGHT_BACKGROUND_LIGHT_GRAY).show(ui, |ui| {
                         self.render_search_results(ui);
@@ -125,23 +128,30 @@ impl App for DictionaryApp {
 
 impl DictionaryApp {
     fn perform_search(&mut self, prompt: SearchPrompt) {
+        if let Some(handle) = self.search_thread.take() {
+            handle.join().unwrap();
+        }
 
         let search_text = match prompt {
-            SearchPrompt::Query => &self.query,
-            SearchPrompt::SelectedText => &self.selected_text,
+            SearchPrompt::Query => self.query.clone(),
+            SearchPrompt::SelectedText => self.selected_text.clone(),
         };
 
-        match search_db(search_text, 0, 20) {
-            Ok(results) => {
-                self.search_results = results;
-                println!("Found {} results", self.search_results.len());
-                self.scroll_to_top = true;
+        let search_results = self.search_results.clone();
+        let search_thread = std::thread::spawn(move || {
+            match search_db(&search_text, 0, 20) {
+                Ok(results) => {
+                    *search_results.lock().unwrap() = results;
+                }
+                Err(e) => {
+                    println!("Error occurred while searching: {:?}", e);
+                }
             }
-            Err(e) => {
-                println!("Error occurred while searching: {:?}", e);
-            }
-        }
+        });
+
+        self.search_thread = Some(search_thread);
     }
+
     fn render_search_bar(&mut self, ui: &mut egui::Ui) {
         let mut search_triggered = false;
         let mut selection_changed = false;
@@ -234,7 +244,7 @@ impl DictionaryApp {
 
     fn render_search_results(&mut self, ui: &mut egui::Ui) {
         ui.add_space(10.0);
-        ui.label(format!("Found {} results:", self.search_results.len()));
+        ui.label(format!("Found {} results:", self.search_results.lock().unwrap().len()));
         ui.add_space(10.0);
 
         egui::ScrollArea::vertical()
@@ -244,8 +254,8 @@ impl DictionaryApp {
                     ui.scroll_to_cursor(Some(egui::Align::Min)); // 滚动到顶部
                     self.scroll_to_top = false; // 重置状态
                 }
-
-                for (i, entry) in self.search_results.iter().enumerate() {
+                let search_results = self.search_results.lock().unwrap();
+                for (i, entry) in search_results.iter().enumerate() {
                     egui::Frame::none()
                         .fill(self.bg_colors[i % self.bg_colors.len()])
                         .rounding(egui::Rounding::same(20.0))
