@@ -251,8 +251,8 @@ impl DictionaryApp {
             .auto_shrink([false, false])
             .show(ui, |ui| {
                 if self.scroll_to_top {
-                    ui.scroll_to_cursor(Some(egui::Align::Min)); // 滚动到顶部
-                    self.scroll_to_top = false; // 重置状态
+                    ui.scroll_to_cursor(Some(egui::Align::Min));
+                    self.scroll_to_top = false;
                 }
                 let search_results = self.search_results.lock().unwrap();
                 for (i, entry) in search_results.iter().enumerate() {
