@@ -2,7 +2,7 @@
 
 JPDict is a Japanese dictionary application built using Rust and eframe.
 
-![doc/example.gif](doc/example.gif)
+![doc/example_240613.gif](doc/example_240613.gif)
 
 ## Table of Contents
 
