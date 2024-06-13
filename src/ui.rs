@@ -5,6 +5,7 @@ use eframe::{egui, App, Frame};
 use crate::dictionary::DictionaryEntry;
 use crate::db::search_db;
 use arboard::Clipboard;
+use tokio::runtime::Runtime;
 
 const CARD_0_ALICE_BLUE: egui::Color32 = egui::Color32::from_rgb(240, 248, 255);
 const CARD_1_ANTIQUE_WHITE: egui::Color32 = egui::Color32::from_rgb(250, 235, 215);
@@ -42,10 +43,12 @@ pub struct DictionaryApp {
     scroll_to_top: bool,
     previous_char_range: Option<egui::text::CCursorRange>,
     search_thread: Option<std::thread::JoinHandle<()>>,
+    runtime: Arc<Runtime>,
 }
 
 impl DictionaryApp {
     pub(crate) fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        let runtime = Runtime::new().unwrap();
         let mut fonts = eframe::egui::FontDefinitions::default();
         fonts.font_data.insert(
             FONT_NAME.to_owned(),
@@ -64,7 +67,6 @@ impl DictionaryApp {
             .unwrap()
             .push(FONT_NAME.to_owned());
         cc.egui_ctx.set_fonts(fonts);
-
         DictionaryApp::default()
     }
 
@@ -83,6 +85,7 @@ impl DictionaryApp {
 
 impl Default for DictionaryApp {
     fn default() -> Self {
+        let runtime = Runtime::new().unwrap();
         Self {
             query: "".to_owned(),
             search_results: Arc::new(Mutex::new(Vec::new())),
@@ -92,6 +95,7 @@ impl Default for DictionaryApp {
             scroll_to_top: false,
             previous_char_range: None,
             search_thread: None,
+            runtime: Arc::new(runtime),
         }
     }
 }
@@ -128,18 +132,16 @@ impl App for DictionaryApp {
 
 impl DictionaryApp {
     fn perform_search(&mut self, prompt: SearchPrompt) {
-        if let Some(handle) = self.search_thread.take() {
-            handle.join().unwrap();
-        }
-
         let search_text = match prompt {
             SearchPrompt::Query => self.query.clone(),
             SearchPrompt::SelectedText => self.selected_text.clone(),
         };
 
         let search_results = self.search_results.clone();
-        let search_thread = std::thread::spawn(move || {
-            match search_db(&search_text, 0, 20) {
+        let runtime = self.runtime.clone();
+
+        runtime.spawn(async move {
+            match search_db(&search_text, 0, 20).await {
                 Ok(results) => {
                     *search_results.lock().unwrap() = results;
                 }
@@ -148,8 +150,6 @@ impl DictionaryApp {
                 }
             }
         });
-
-        self.search_thread = Some(search_thread);
     }
 
     fn render_search_bar(&mut self, ui: &mut egui::Ui) {
