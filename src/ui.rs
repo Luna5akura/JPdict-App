@@ -166,7 +166,7 @@ impl DictionaryApp {
 
             ui.add_space(side_space);
 
-            let search_bar = egui::TextEdit::singleline(&mut self.query)
+            let search_bar = egui::TextEdit::multiline(&mut self.query)
                 .font(egui::TextStyle::Body)
                 .frame(true)
                 .desired_width(300.0)
