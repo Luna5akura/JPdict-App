@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+#[derive(Eq, Hash, PartialEq)]
 #[derive(Clone)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DictionaryEntry {

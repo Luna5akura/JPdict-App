@@ -2,9 +2,9 @@
 
 /// jpdict/src/main.rs
 
-mod ui;
-mod db;
 mod dictionary;
+mod db;
+mod ui;
 
 use std::sync::Arc;
 use eframe::{run_native, NativeOptions, CreationContext};
@@ -16,7 +16,7 @@ fn main() {
     init_db().expect("Failed to initialize database");
     populate_db().expect("Failed to populate database");
 
-    let mut native_options = eframe::NativeOptions::default();
+    let mut native_options = NativeOptions::default();
     let icon_data = include_bytes!("hso.png");
     let img = image::load_from_memory_with_format(icon_data, image::ImageFormat::Png).unwrap();
     let rgba_data = img.into_rgba8();
