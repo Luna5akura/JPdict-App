@@ -1,4 +1,3 @@
-use std::sync::{Arc, Mutex};
 /// jpdict/src/ui.rs
 
 use eframe::{egui, App, Frame};
@@ -6,6 +5,9 @@ use crate::dictionary::DictionaryEntry;
 use crate::db::search_db;
 use arboard::Clipboard;
 use tokio::runtime::Runtime;
+use std::sync::{Arc, Mutex};
+use std::collections::HashSet;
+use eframe::egui::accesskit::Checked::False;
 
 const CARD_0_ALICE_BLUE: egui::Color32 = egui::Color32::from_rgb(240, 248, 255);
 const CARD_1_ANTIQUE_WHITE: egui::Color32 = egui::Color32::from_rgb(250, 235, 215);
@@ -44,6 +46,8 @@ pub struct DictionaryApp {
     previous_char_range: Option<egui::text::CCursorRange>,
     search_thread: Option<std::thread::JoinHandle<()>>,
     runtime: Arc<Runtime>,
+    favorites: Arc<Mutex<HashSet<DictionaryEntry>>>,
+    showing_favorites: bool,
 }
 
 impl DictionaryApp {
@@ -81,6 +85,45 @@ impl DictionaryApp {
 
         ctx.set_style(style);
     }
+    fn add_to_favorites(&self, entry: DictionaryEntry) {
+        let mut favorites = self.favorites.lock().unwrap();
+        favorites.insert(entry);
+    }
+    fn show_favorites(&self, ui: &mut egui::Ui) {
+
+        let favorites = self.favorites.lock().unwrap();
+        if favorites.is_empty() {
+            ui.label("No favorites yet.");
+        } else {
+            ui.vertical_centered(|ui| {
+                ui.add_space(10.0);
+                ui.label(format!("{} favorite(s):", favorites.len()));
+                ui.add_space(10.0);
+
+                egui::ScrollArea::vertical()
+                    .auto_shrink([false, false])
+                    .show(ui, |ui| {
+                        for (i, entry) in favorites.iter().enumerate() {
+                            egui::Frame::none()
+                                .fill(self.bg_colors[i % self.bg_colors.len()])
+                                .rounding(egui::Rounding::same(20.0))
+                                .stroke(egui::Stroke::new(1.0, OUTLINE_DARK_GRAY))
+                                .inner_margin(egui::vec2(10.0, 10.0))
+                                .shadow(egui::epaint::Shadow {
+                                    offset: egui::vec2(6.0, 6.0),
+                                    blur: 5.0,
+                                    color: egui::Color32::from_black_alpha(30),
+                                    spread: 0.0,
+                                })
+                                .show(ui, |ui| {
+                                    self.render_search_result_item(ui, entry, i);
+                                });
+                            ui.add_space(20.0);
+                        }
+                    });
+            });
+        }
+    }
 }
 
 impl Default for DictionaryApp {
@@ -96,6 +139,8 @@ impl Default for DictionaryApp {
             previous_char_range: None,
             search_thread: None,
             runtime: Arc::new(runtime),
+            favorites: Arc::new(Mutex::new(HashSet::new())),
+            showing_favorites: false
         }
     }
 }
@@ -119,12 +164,20 @@ impl App for DictionaryApp {
                     self.render_search_bar(ui);
                 });
 
-                if !self.search_results.lock().unwrap().is_empty() {
+
+                if self.showing_favorites {
+                    ui.separator();
+                    egui::Frame::none().fill(MAIN_LIGHT_BACKGROUND_LIGHT_GRAY).show(ui, |ui| {
+                        self.show_favorites(ui);
+                    });
+                } else if !self.search_results.lock().unwrap().is_empty() {
                     ui.separator();
                     egui::Frame::none().fill(MAIN_LIGHT_BACKGROUND_LIGHT_GRAY).show(ui, |ui| {
                         self.render_search_results(ui);
                     });
                 }
+
+
             });
         });
     }
@@ -132,6 +185,7 @@ impl App for DictionaryApp {
 
 impl DictionaryApp {
     fn perform_search(&mut self, prompt: SearchPrompt) {
+        self.showing_favorites = false;
         let search_text = match prompt {
             SearchPrompt::Query => self.query.clone(),
             SearchPrompt::SelectedText => self.selected_text.clone(),
@@ -160,7 +214,7 @@ impl DictionaryApp {
 
         ui.horizontal(|ui| {
             let total_width = ui.available_width();
-            let element_width = 10.0 + 300.0 + 10.0 + 100.0 + 10.0 + 40.0 + 10.0;
+            let element_width = 10.0 + 300.0 + 10.0 + 100.0 + 10.0 + 40.0 + 10.0 + 40.0 + 10.0;
             let remaining_space = total_width - element_width;
             let side_space = remaining_space / 2.0;
 
@@ -229,6 +283,13 @@ impl DictionaryApp {
                 self.query.clear();
             }
 
+            // Button to show favorites
+            if ui.add_sized(
+                [40.0, 35.0],
+                egui::Button::new(egui::RichText::new("★").size(FONT_SIZE_MEDIUM))
+            ).clicked() {
+                self.showing_favorites = true;
+            }
             ui.add_space(side_space);
         });
 
@@ -282,9 +343,16 @@ impl DictionaryApp {
         ui.vertical_centered(|ui| {
             ui.set_width(600.0);
 
-            ui.vertical(|ui| {
-                ui.label(egui::RichText::new(&entry.word).size(FONT_SIZE_LARGE).strong()).on_hover_text(format!("Pronunciation: {}", entry.pronunciation));
-                ui.label(egui::RichText::new(format!("【{}】", &entry.reading)).size(FONT_SIZE_MEDIUM));
+            ui.horizontal(|ui| {
+                ui.vertical(|ui| {
+                    ui.label(egui::RichText::new(&entry.word).size(FONT_SIZE_LARGE).strong()).on_hover_text(format!("Pronunciation: {}", entry.pronunciation));
+                    ui.label(egui::RichText::new(format!("【{}】", &entry.reading)).size(FONT_SIZE_MEDIUM));
+                });
+
+                // Add favorite button
+                if ui.button("★").on_hover_text("Add to favorites").clicked() {
+                    self.add_to_favorites(entry.clone());
+                }
             });
 
             ui.add_space(5.0);
@@ -324,5 +392,4 @@ impl DictionaryApp {
             });
         });
     }
-
 }
