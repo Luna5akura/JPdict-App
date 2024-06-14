@@ -1,3 +1,5 @@
+/// jpdict/src/ui/favorite.rs
+
 use eframe::egui;
 use crate::dictionary::DictionaryEntry;
 use crate::ui::DictionaryApp;

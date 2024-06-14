@@ -1,3 +1,5 @@
+/// jpdict/src/ui/search.rs
+
 use eframe::egui;
 use crate::db::search_db;
 use crate::dictionary::DictionaryEntry;

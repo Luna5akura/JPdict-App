@@ -37,9 +37,9 @@ cargo run --release
 The project is organized into the following modules:
 
 - `src/main.rs`: The main entry point of the application.
-- `src/db.rs`: Functions for initializing and populating the database.
+- `src/db/`: Functions for initializing and populating the database.
 - `src/dictionary.rs`: Defines the structure of dictionary entries.
-- `src/ui.rs`: Manages the user interface using the eframe crate.
+- `src/ui/`: Manages the user interface using the eframe crate.
 
 ## Database
 

@@ -1,3 +1,5 @@
+/// jpdict/src/ui/styles.rs
+
 use eframe::egui;
 use crate::ui::constants::{FONT_SIZE_BODY, OUTLINE_DARK_GRAY};
 
