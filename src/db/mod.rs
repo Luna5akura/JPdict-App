@@ -5,7 +5,7 @@ mod utils;
 
 pub use db_setup::{init_db, populate_db};
 pub use utils::{calculate_score, replace_repeated_consonants};
-use rusqlite::{Connection, Result, params};
+use rusqlite::{Connection, Result};
 use crate::dictionary::DictionaryEntry;
 
 pub async fn search_db(query: &str, page: usize, limit: usize) -> Result<Vec<DictionaryEntry>> {

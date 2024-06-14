@@ -1,3 +1,5 @@
+/// jpdict/src/ui/constants.rs
+
 use eframe::egui;
 
 pub const CARD_COLORS: [egui::Color32; 6] = [
