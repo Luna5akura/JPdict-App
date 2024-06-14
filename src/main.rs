@@ -2,9 +2,9 @@
 
 /// jpdict/src/main.rs
 
-mod ui;
-mod db;
 mod dictionary;
+mod db;
+mod ui;
 
 use std::sync::Arc;
 use eframe::{run_native, NativeOptions, CreationContext};

@@ -1,4 +1,4 @@
-/// jpdict/src/ui.rs
+/// jpdict/src/ui/mod.rs
 
 use eframe::{egui, App, Frame};
 use crate::dictionary::DictionaryEntry;
@@ -7,29 +7,7 @@ use arboard::Clipboard;
 use tokio::runtime::Runtime;
 use std::sync::{Arc, Mutex};
 use std::collections::HashSet;
-use eframe::egui::accesskit::Checked::False;
-
-const CARD_0_ALICE_BLUE: egui::Color32 = egui::Color32::from_rgb(240, 248, 255);
-const CARD_1_ANTIQUE_WHITE: egui::Color32 = egui::Color32::from_rgb(250, 235, 215);
-const CARD_2_LAVENDER: egui::Color32 = egui::Color32::from_rgb(230, 230, 250);
-const CARD_3_MISTY_ROSE: egui::Color32 = egui::Color32::from_rgb(255, 228, 225);
-const CARD_4_AZURE: egui::Color32 = egui::Color32::from_rgb(240, 255, 255);
-const CARD_5_BEIGE: egui::Color32 = egui::Color32::from_rgb(245, 245, 220);
-const MAIN_LIGHT_BACKGROUND_LIGHT_GRAY: egui::Color32 = egui::Color32::from_rgb(240, 240, 240);
-const WHITE_SMOKE: egui::Color32 = egui::Color32::from_rgb(250, 250, 250);
-const GAINSBORO: egui::Color32 = egui::Color32::from_rgb(245, 245, 245);
-const TAG_BACKGROUND_LIGHT_BLUE: egui::Color32 = egui::Color32::from_rgb(224, 240, 255);
-const TAG_COLOR_BLUE: egui::Color32 = egui::Color32::from_rgb(0, 123, 255);
-const OUTLINE_DARK_GRAY: egui::Color32 = egui::Color32::DARK_GRAY;
-const PROPERTY_COLOR_BLUE: egui::Color32 = egui::Color32::BLUE;
-const ADDITION_COLOR_DARKGREEN: egui::Color32 = egui::Color32::DARK_GREEN;
-// const FONT_NAME: &str = "A-OTF-GothicMB101Pr5-Reg";
-const FONT_NAME: &str = "epmgobld";
-
-const FONT_SIZE_BODY: f32 = 20.0;
-const FONT_SIZE_LARGE: f32 = 40.0;
-const FONT_SIZE_MEDIUM: f32 = 20.0;
-const FONT_SIZE_SMALL: f32 = 15.0;
+use super::constants::*;
 
 enum SearchPrompt {
     Query,
@@ -39,7 +17,6 @@ enum SearchPrompt {
 pub struct DictionaryApp {
     query: String,
     search_results: Arc<Mutex<Vec<DictionaryEntry>>>,
-    bg_colors: Vec<egui::Color32>,
     last_clipboard_content: String,
     selected_text: String,
     scroll_to_top: bool,
@@ -50,6 +27,24 @@ pub struct DictionaryApp {
     showing_favorites: bool,
 }
 
+impl Default for DictionaryApp {
+    fn default() -> Self {
+        let runtime = Runtime::new().unwrap();
+        Self {
+            query: "".to_owned(),
+            search_results: Arc::new(Mutex::new(Vec::new())),
+            last_clipboard_content: String::new(),
+            selected_text: String::new(),
+            scroll_to_top: false,
+            previous_char_range: None,
+            search_thread: None,
+            runtime: Arc::new(runtime),
+            favorites: Arc::new(Mutex::new(HashSet::new())),
+            showing_favorites: false
+        }
+    }
+}
+
 impl DictionaryApp {
     pub(crate) fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let runtime = Runtime::new().unwrap();
@@ -57,7 +52,7 @@ impl DictionaryApp {
         fonts.font_data.insert(
             FONT_NAME.to_owned(),
             // TODO: can the path here changed?
-            eframe::egui::FontData::from_static(include_bytes!("./font/epmgobld.ttf")),
+            eframe::egui::FontData::from_static(include_bytes!("../font/epmgobld.ttf")),
             // eframe::egui::FontData::from_static(include_bytes!("C:\\Windows\\Fonts\\msyh.ttc")),
         );
         fonts
@@ -85,10 +80,12 @@ impl DictionaryApp {
 
         ctx.set_style(style);
     }
+
     fn add_to_favorites(&self, entry: DictionaryEntry) {
         let mut favorites = self.favorites.lock().unwrap();
         favorites.insert(entry);
     }
+
     fn show_favorites(&self, ui: &mut egui::Ui) {
 
         let favorites = self.favorites.lock().unwrap();
@@ -104,86 +101,15 @@ impl DictionaryApp {
                     .auto_shrink([false, false])
                     .show(ui, |ui| {
                         for (i, entry) in favorites.iter().enumerate() {
-                            egui::Frame::none()
-                                .fill(self.bg_colors[i % self.bg_colors.len()])
-                                .rounding(egui::Rounding::same(20.0))
-                                .stroke(egui::Stroke::new(1.0, OUTLINE_DARK_GRAY))
-                                .inner_margin(egui::vec2(10.0, 10.0))
-                                .shadow(egui::epaint::Shadow {
-                                    offset: egui::vec2(6.0, 6.0),
-                                    blur: 5.0,
-                                    color: egui::Color32::from_black_alpha(30),
-                                    spread: 0.0,
-                                })
-                                .show(ui, |ui| {
-                                    self.render_search_result_item(ui, entry, i);
-                                });
-                            ui.add_space(20.0);
+                            self.render_card(i, ui, |ui| {
+                                self.render_search_result_item(ui, entry, i);
+                            });
                         }
                     });
             });
         }
     }
-}
 
-impl Default for DictionaryApp {
-    fn default() -> Self {
-        let runtime = Runtime::new().unwrap();
-        Self {
-            query: "".to_owned(),
-            search_results: Arc::new(Mutex::new(Vec::new())),
-            bg_colors: vec![CARD_0_ALICE_BLUE, CARD_1_ANTIQUE_WHITE, CARD_2_LAVENDER, CARD_3_MISTY_ROSE, CARD_4_AZURE, CARD_5_BEIGE],
-            last_clipboard_content: String::new(),
-            selected_text: String::new(),
-            scroll_to_top: false,
-            previous_char_range: None,
-            search_thread: None,
-            runtime: Arc::new(runtime),
-            favorites: Arc::new(Mutex::new(HashSet::new())),
-            showing_favorites: false
-        }
-    }
-}
-
-impl App for DictionaryApp {
-    fn update(&mut self, ctx: &egui::Context, frame: &mut Frame) {
-        DictionaryApp::setup_styles(ctx);
-
-        let mut clipboard = Clipboard::new().unwrap();
-        if let Ok(new_clipboard_content) = clipboard.get_text() {
-            if new_clipboard_content != self.last_clipboard_content {
-                self.last_clipboard_content = new_clipboard_content.clone();
-                self.query = new_clipboard_content;
-                self.perform_search(SearchPrompt::Query);
-            }
-        }
-
-        egui::CentralPanel::default().frame(egui::Frame::window(&ctx.style()).fill(MAIN_LIGHT_BACKGROUND_LIGHT_GRAY)).show(ctx, |ui| {
-            ui.vertical_centered(|ui| {
-                egui::Frame::none().fill(MAIN_LIGHT_BACKGROUND_LIGHT_GRAY).show(ui, |ui| {
-                    self.render_search_bar(ui);
-                });
-
-
-                if self.showing_favorites {
-                    ui.separator();
-                    egui::Frame::none().fill(MAIN_LIGHT_BACKGROUND_LIGHT_GRAY).show(ui, |ui| {
-                        self.show_favorites(ui);
-                    });
-                } else if !self.search_results.lock().unwrap().is_empty() {
-                    ui.separator();
-                    egui::Frame::none().fill(MAIN_LIGHT_BACKGROUND_LIGHT_GRAY).show(ui, |ui| {
-                        self.render_search_results(ui);
-                    });
-                }
-
-
-            });
-        });
-    }
-}
-
-impl DictionaryApp {
     fn perform_search(&mut self, prompt: SearchPrompt) {
         self.showing_favorites = false;
         let search_text = match prompt {
@@ -317,19 +243,7 @@ impl DictionaryApp {
                 }
                 let search_results = self.search_results.lock().unwrap();
                 for (i, entry) in search_results.iter().enumerate() {
-                    egui::Frame::none()
-                        .fill(self.bg_colors[i % self.bg_colors.len()])
-                        .rounding(egui::Rounding::same(20.0))
-                        .stroke(egui::Stroke::new(1.0, OUTLINE_DARK_GRAY))
-                        .inner_margin(egui::vec2(10.0, 10.0))
-                        .shadow(egui::epaint::Shadow {
-                            offset: egui::vec2(6.0, 6.0),
-                            blur: 5.0,
-                            color: egui::Color32::from_black_alpha(30),
-                            spread: 0.0,
-                        })
-                        .show(ui, |ui| {
-
+                    self.render_card(i, ui, |ui| {
                         self.render_search_result_item(ui, entry, i);
                     });
                     ui.add_space(20.0);
@@ -389,6 +303,59 @@ impl DictionaryApp {
                     ui.label(egui::RichText::new(format!("- {}", tran)).size(FONT_SIZE_MEDIUM).strong());
                     // ui.label(egui::RichText::new(format!("- {}", tran)).size(FONT_SIZE_SMALL));
                 }
+            });
+        });
+    }
+
+    fn render_card<R>(&self,cnt: usize, ui: &mut egui::Ui, add_contents: impl FnOnce(&mut egui::Ui) -> R) {
+        egui::Frame::none()
+            .fill(CARD_COLORS[cnt % CARD_COLORS.len()])
+            .rounding(egui::Rounding::same(20.0))
+            .stroke(egui::Stroke::new(1.0, OUTLINE_DARK_GRAY))
+            .inner_margin(egui::vec2(10.0, 10.0))
+            .shadow(egui::epaint::Shadow {
+                offset: egui::vec2(6.0, 6.0),
+                blur: 5.0,
+                color: egui::Color32::from_black_alpha(30),
+                spread: 0.0,
+            })
+            .show(ui, add_contents);
+    }
+}
+
+impl App for DictionaryApp {
+    fn update(&mut self, ctx: &egui::Context, frame: &mut Frame) {
+        DictionaryApp::setup_styles(ctx);
+
+        let mut clipboard = Clipboard::new().unwrap();
+        if let Ok(new_clipboard_content) = clipboard.get_text() {
+            if new_clipboard_content != self.last_clipboard_content {
+                self.last_clipboard_content = new_clipboard_content.clone();
+                self.query = new_clipboard_content;
+                self.perform_search(SearchPrompt::Query);
+            }
+        }
+
+        egui::CentralPanel::default().frame(egui::Frame::window(&ctx.style()).fill(MAIN_LIGHT_BACKGROUND_LIGHT_GRAY)).show(ctx, |ui| {
+            ui.vertical_centered(|ui| {
+                egui::Frame::none().fill(MAIN_LIGHT_BACKGROUND_LIGHT_GRAY).show(ui, |ui| {
+                    self.render_search_bar(ui);
+                });
+
+
+                if self.showing_favorites {
+                    ui.separator();
+                    egui::Frame::none().fill(MAIN_LIGHT_BACKGROUND_LIGHT_GRAY).show(ui, |ui| {
+                        self.show_favorites(ui);
+                    });
+                } else if !self.search_results.lock().unwrap().is_empty() {
+                    ui.separator();
+                    egui::Frame::none().fill(MAIN_LIGHT_BACKGROUND_LIGHT_GRAY).show(ui, |ui| {
+                        self.render_search_results(ui);
+                    });
+                }
+
+
             });
         });
     }
