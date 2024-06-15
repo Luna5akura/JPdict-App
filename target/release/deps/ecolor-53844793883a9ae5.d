@@ -1,0 +1,12 @@
+D:\RustRover\jpdict\target\release\deps\libecolor-53844793883a9ae5.rmeta: C:\Users\73451\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.27.2\src\lib.rs C:\Users\73451\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.27.2\src\color32.rs C:\Users\73451\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.27.2\src\hsva_gamma.rs C:\Users\73451\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.27.2\src\hsva.rs C:\Users\73451\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.27.2\src\rgba.rs C:\Users\73451\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.27.2\src\hex_color_runtime.rs
+
+D:\RustRover\jpdict\target\release\deps\libecolor-53844793883a9ae5.rlib: C:\Users\73451\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.27.2\src\lib.rs C:\Users\73451\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.27.2\src\color32.rs C:\Users\73451\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.27.2\src\hsva_gamma.rs C:\Users\73451\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.27.2\src\hsva.rs C:\Users\73451\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.27.2\src\rgba.rs C:\Users\73451\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.27.2\src\hex_color_runtime.rs
+
+D:\RustRover\jpdict\target\release\deps\ecolor-53844793883a9ae5.d: C:\Users\73451\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.27.2\src\lib.rs C:\Users\73451\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.27.2\src\color32.rs C:\Users\73451\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.27.2\src\hsva_gamma.rs C:\Users\73451\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.27.2\src\hsva.rs C:\Users\73451\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.27.2\src\rgba.rs C:\Users\73451\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.27.2\src\hex_color_runtime.rs
+
+C:\Users\73451\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.27.2\src\lib.rs:
+C:\Users\73451\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.27.2\src\color32.rs:
+C:\Users\73451\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.27.2\src\hsva_gamma.rs:
+C:\Users\73451\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.27.2\src\hsva.rs:
+C:\Users\73451\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.27.2\src\rgba.rs:
+C:\Users\73451\.cargo\registry\src\index.crates.io-6f17d22bba15001f\ecolor-0.27.2\src\hex_color_runtime.rs:
