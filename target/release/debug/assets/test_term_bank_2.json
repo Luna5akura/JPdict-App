@@ -1,0 +1,45 @@
+[
+  [
+    "熱い戦争",
+    "あついせんそう",
+    "exp n",
+    "",
+    -200,
+    [
+      "hot war"
+    ],
+    2606950,
+    "",
+    "atsuisensō"
+  ],
+  [
+    "アッとゆう間に",
+    "",
+    "",
+    "",
+    -5050000,
+    [
+      {
+        "content": {
+          "content": [
+            "⟶",
+            {
+              "content": "あっという間に",
+              "href": "?query=あっという間に&wildcards=off",
+              "lang": "ja",
+              "tag": "a"
+            }
+          ],
+          "style": {
+            "fontSize": "130%"
+          },
+          "tag": "span"
+        },
+        "type": "structured-content"
+      }
+    ],
+    -1000390,
+    "",
+    ""
+  ]
+]

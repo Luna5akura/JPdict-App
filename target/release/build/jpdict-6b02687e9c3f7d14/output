@@ -1,0 +1,15 @@
+cargo:rerun-if-changed=assets
+package.metadata.winres does not exist
+"C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.19041.0\\x64\\rc.exe"
+Selected RC path: 'C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\rc.exe'
+RC Output:
+Microsoft (R) Windows (R) Resource Compiler Version 10.0.10011.16384
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+------
+RC Error:
+
+------
+cargo:rustc-link-search=native=D:\RustRover\jpdict\target\release\build\jpdict-6b02687e9c3f7d14\out
+cargo:rustc-link-lib=dylib=resource
