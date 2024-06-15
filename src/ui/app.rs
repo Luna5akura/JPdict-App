@@ -5,7 +5,6 @@ use crate::dictionary::DictionaryEntry;
 use arboard::Clipboard;
 use tokio::runtime::Runtime;
 use std::sync::{Arc, Mutex};
-use std::collections::HashSet;
 use super::constants::*;
 use super::styles::setup_styles;
 use super::search::SearchPrompt;
@@ -18,7 +17,7 @@ pub struct DictionaryApp {
     pub(crate) scroll_to_top: bool,
     pub(crate) previous_char_range: Option<egui::text::CCursorRange>,
     pub(crate) runtime: Arc<Runtime>,
-    pub(crate) favorites: Arc<Mutex<HashSet<DictionaryEntry>>>,
+    pub(crate) favorites: Arc<Mutex<Vec<DictionaryEntry>>>,
     pub(crate) showing_favorites: bool,
 }
 
@@ -33,7 +32,7 @@ impl Default for DictionaryApp {
             scroll_to_top: false,
             previous_char_range: None,
             runtime: Arc::new(runtime),
-            favorites: Arc::new(Mutex::new(HashSet::new())),
+            favorites: Arc::new(Mutex::new(Vec::new())),
             showing_favorites: false
         }
     }

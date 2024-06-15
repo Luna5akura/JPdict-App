@@ -6,13 +6,28 @@ use crate::ui::DictionaryApp;
 
 impl DictionaryApp {
     pub(crate) fn add_to_favorites(&self, entry: DictionaryEntry) {
-        let mut favorites = self.favorites.lock().unwrap();
-        favorites.insert(entry);
+        let mut favorites = match self.favorites.lock() {
+            Ok(fav) => fav,
+            Err(_) => {
+                eprintln!("Failed to lock favorites mutex");
+                return;
+            }
+        };
+
+        if !favorites.iter().any(|e| *e == entry) {
+            favorites.push(entry);
+        }
     }
 
     pub fn show_favorites(&self, ui: &mut egui::Ui) {
+        let favorites = match self.favorites.lock() {
+            Ok(fav) => fav,
+            Err(_) => {
+                ui.label("Failed to load favorites.");
+                return;
+            }
+        };
 
-        let favorites = self.favorites.lock().unwrap();
         if favorites.is_empty() {
             ui.label("No favorites yet.");
         } else {
