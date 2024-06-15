@@ -4,6 +4,8 @@ JPDict is a Japanese dictionary application built using Rust and eframe.
 
 ![doc/example_240613.gif](doc/example_240613.gif)
 
+## TLDR: Download and run [/target/release/JPDict.exe](https://github.com/Luna5akura/JPdict-App/blob/master/target/release/JPDict.exe)
+
 ## Table of Contents
 
 - Installation
