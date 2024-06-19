@@ -106,6 +106,7 @@ Search results are displayed in a scrollable list, with each result showing the 
 
 The search functionality is implemented with the following features:
 
+- **NEW FEATURE**: Read the clipboard / Search the selected area
 - Search by word, reading, translations, or pronunciation.
 - Results are scored based on relevance and frequency.
 - Pagination is supported to handle large result sets.
