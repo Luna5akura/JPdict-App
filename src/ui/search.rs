@@ -17,8 +17,8 @@ impl DictionaryApp {
     pub fn perform_search(&mut self, prompt: SearchPrompt) {
         self.showing_favorites = false;
         let search_text = match prompt {
-            SearchPrompt::Query => self.query.clone(),
-            SearchPrompt::SelectedText => self.selected_text.clone(),
+            SearchPrompt::Query => self.query.trim().to_string(),
+            SearchPrompt::SelectedText => self.selected_text.trim().to_string(),
         };
 
         let search_results = self.search_results.clone();
@@ -96,6 +96,15 @@ impl DictionaryApp {
                     self.previous_char_range = None;
                     self.selected_text.clear();
                     println!("Selection cleared")
+                }
+            }
+
+            if search_response.has_focus() {
+                if ui.input(|i| i.key_pressed(egui::Key::Enter) && !i.modifiers.shift) {
+                    search_triggered = true;
+                }
+                if ui.input(|i| i.key_pressed(egui::Key::Enter) && i.modifiers.shift) {
+                    self.query.push('\n');
                 }
             }
 
