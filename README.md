@@ -8,6 +8,8 @@ JPDict is a Japanese dictionary application built using Rust and eframe.
 
 ## Table of Contents
 
+- **NEW FEATURE**: Read the clipboard / Search the selected area
+
 - Installation
 - Usage
 - Project Structure
@@ -22,7 +24,7 @@ JPDict is a Japanese dictionary application built using Rust and eframe.
 To install JPDict, clone the repository and build it using Cargo:
 
 ```bash
-git clone https://github.com/yourusername/jpdict.git
+https://github.com/Luna5akura/JPdict-App.git
 cd jpdict
 cargo build --release
 ```
