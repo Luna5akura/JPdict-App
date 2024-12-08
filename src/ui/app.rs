@@ -59,11 +59,40 @@ impl DictionaryApp {
             .unwrap()
             .push(FONT_NAME.to_owned());
         cc.egui_ctx.set_fonts(fonts);
-        DictionaryApp::default()
+
+        let mut app = DictionaryApp::default();
+        app.load_favorites();
+        app
     }
 
+    fn save_favorites(&self) {
+        let favorites = self.favorites.lock().unwrap();
+        let path = "favorites.json";
+        match serde_json::to_string(&*favorites) {
+            Ok(json) => {
+                if let Err(e) = std::fs::write(path, json) {
+                    eprintln!("Failed to save favorites: {}", e);
+                }
+            },
+            Err(e) => {
+                eprintln!("Failed to serialize favorites: {}", e);
+            }
+        }
+    }
 
-
+    fn load_favorites(&mut self) {
+        let path = "favorites.json";
+        if let Ok(json) = std::fs::read_to_string(path) {
+            match serde_json::from_str(&json) {
+                Ok(favs) => {
+                    *self.favorites.lock().unwrap() = favs;
+                },
+                Err(e) => {
+                    eprintln!("Failed to deserialize favorites: {}", e);
+                }
+            }
+        }
+    }
 
     pub fn render_card<R>(&self,cnt: usize, ui: &mut egui::Ui, add_contents: impl FnOnce(&mut egui::Ui) -> R) {
         egui::Frame::none()
@@ -113,5 +142,9 @@ impl App for DictionaryApp {
                 }
             });
         });
+    }
+
+    fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+        self.save_favorites();
     }
 }
