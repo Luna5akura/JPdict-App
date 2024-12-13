@@ -1,4 +1,2 @@
 /target/*
-!/target/release/
-/target/release/.fingerprint/
-/target/release/.cargo-lock
+/.idea
