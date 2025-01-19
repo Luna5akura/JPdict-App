@@ -95,10 +95,18 @@ impl DictionaryApp {
     }
 
     pub fn render_card<R>(&self,cnt: usize, ui: &mut egui::Ui, add_contents: impl FnOnce(&mut egui::Ui) -> R) {
+        let is_dark_mode = ui.style().visuals.dark_mode;
+
+        let card_colors = if is_dark_mode {
+            DARK_CARD_COLORS
+        } else {
+            LIGHT_CARD_COLORS
+        };
+
         egui::Frame::none()
-            .fill(CARD_COLORS[cnt % CARD_COLORS.len()])
+            .fill(card_colors[cnt % card_colors.len()])
             .rounding(egui::Rounding::same(20.0))
-            .stroke(egui::Stroke::new(1.0, OUTLINE_DARK_GRAY))
+            .stroke(egui::Stroke::new(1.0, LIGHT_OUTLINE_DARK_GRAY))
             .inner_margin(egui::vec2(10.0, 10.0))
             .shadow(egui::epaint::Shadow {
                 offset: egui::vec2(6.0, 6.0),
@@ -108,11 +116,35 @@ impl DictionaryApp {
             })
             .show(ui, add_contents);
     }
+
+    pub fn set_dark_mode(&self) {
+        self.runtime.spawn(async {
+            egui::Context::set_visuals(&egui::Context::default(), egui::Visuals {
+                dark_mode: true,
+                ..egui::Visuals::default()
+            });
+        });
+    }
+
+    pub fn set_light_mode(&self) {
+        self.runtime.spawn(async {
+            egui::Context::set_visuals(&egui::Context::default(), egui::Visuals {
+                dark_mode: false,
+                ..egui::Visuals::default()
+            });
+        });
+    }
 }
 
 impl App for DictionaryApp {
     fn update(&mut self, ctx: &egui::Context, frame: &mut Frame) {
         setup_styles(ctx);
+
+        let main_background = if ctx.style().visuals.dark_mode {
+            DARK_MAIN_BACKGROUND_GRAY
+        } else {
+            LIGHT_MAIN_BACKGROUND_LIGHT_GRAY
+        };
 
         let mut clipboard = Clipboard::new().unwrap();
         if let Ok(new_clipboard_content) = clipboard.get_text() {
@@ -123,20 +155,20 @@ impl App for DictionaryApp {
             }
         }
 
-        egui::CentralPanel::default().frame(egui::Frame::window(&ctx.style()).fill(MAIN_LIGHT_BACKGROUND_LIGHT_GRAY)).show(ctx, |ui| {
+        egui::CentralPanel::default().frame(egui::Frame::window(&ctx.style()).fill(main_background)).show(ctx, |ui| {
             ui.vertical_centered(|ui| {
-                egui::Frame::none().fill(MAIN_LIGHT_BACKGROUND_LIGHT_GRAY).show(ui, |ui| {
+                egui::Frame::none().fill(main_background).show(ui, |ui| {
                     self.render_search_bar(ui);
                 });
 
                 if self.showing_favorites {
                     ui.separator();
-                    egui::Frame::none().fill(MAIN_LIGHT_BACKGROUND_LIGHT_GRAY).show(ui, |ui| {
+                    egui::Frame::none().fill(main_background).show(ui, |ui| {
                         self.show_favorites(ui);
                     });
                 } else if !self.search_results.lock().unwrap().is_empty() {
                     ui.separator();
-                    egui::Frame::none().fill(MAIN_LIGHT_BACKGROUND_LIGHT_GRAY).show(ui, |ui| {
+                    egui::Frame::none().fill(main_background).show(ui, |ui| {
                         self.render_search_results(ui);
                     });
                 }

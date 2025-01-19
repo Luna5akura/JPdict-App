@@ -2,7 +2,7 @@
 
 use eframe::egui;
 
-pub const CARD_COLORS: [egui::Color32; 6] = [
+pub const LIGHT_CARD_COLORS: [egui::Color32; 6] = [
     egui::Color32::from_rgb(240, 248, 255),  // ALICE_BLUE
     egui::Color32::from_rgb(250, 235, 215),  // ANTIQUE_WHITE
     egui::Color32::from_rgb(230, 230, 250),  // LAVENDER
@@ -10,12 +10,27 @@ pub const CARD_COLORS: [egui::Color32; 6] = [
     egui::Color32::from_rgb(240, 255, 255),  // AZURE
     egui::Color32::from_rgb(245, 245, 220),  // BEIGE
 ];
-pub const MAIN_LIGHT_BACKGROUND_LIGHT_GRAY: egui::Color32 = egui::Color32::from_rgb(240, 240, 240);
+pub const DARK_CARD_COLORS: [egui::Color32; 6] = [
+    egui::Color32::from_rgb(45, 48, 59),
+    egui::Color32::from_rgb(60, 60, 55),
+    egui::Color32::from_rgb(75, 75, 90),
+    egui::Color32::from_rgb(80, 60, 60),
+    egui::Color32::from_rgb(60, 80, 85),
+    egui::Color32::from_rgb(60, 60, 40),
+];
+
+
+pub const LIGHT_MAIN_BACKGROUND_LIGHT_GRAY: egui::Color32 = egui::Color32::from_rgb(240, 240, 240);
+pub const DARK_MAIN_BACKGROUND_GRAY: egui::Color32 = egui::Color32::from_rgb(32, 33, 36);
+
 pub const WHITE_SMOKE: egui::Color32 = egui::Color32::from_rgb(250, 250, 250);
 pub const GAINSBORO: egui::Color32 = egui::Color32::from_rgb(245, 245, 245);
 pub const TAG_BACKGROUND_LIGHT_BLUE: egui::Color32 = egui::Color32::from_rgb(224, 240, 255);
 pub const TAG_COLOR_BLUE: egui::Color32 = egui::Color32::from_rgb(0, 123, 255);
-pub const OUTLINE_DARK_GRAY: egui::Color32 = egui::Color32::DARK_GRAY;
+
+pub const LIGHT_OUTLINE_DARK_GRAY: egui::Color32 = egui::Color32::DARK_GRAY;
+pub const DARK_OUTLINE_LIGHT_GRAY: egui::Color32 = egui::Color32::LIGHT_GRAY;
+
 pub const PROPERTY_COLOR_BLUE: egui::Color32 = egui::Color32::BLUE;
 pub const ADDITION_COLOR_DARKGREEN: egui::Color32 = egui::Color32::DARK_GREEN;
 // const FONT_NAME: &str = "A-OTF-GothicMB101Pr5-Reg";

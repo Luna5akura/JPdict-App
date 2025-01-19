@@ -23,9 +23,20 @@ fn main() {
     let (w,h)=(rgba_data.width(),rgba_data.height());
     let raw_data: Vec<u8> = rgba_data.into_raw();
     native_options.viewport.icon=Some(Arc::<IconData>::new(IconData { rgba:  raw_data, width: w, height: h }));
+
+
     run_native(
         "JPDict",
         native_options,
-        Box::new(|cc: &CreationContext| Box::new(DictionaryApp::new(cc))),
+        Box::new(|cc: &CreationContext| {
+            let mut app = DictionaryApp::new(cc);
+            let is_dark_mode = cc.egui_ctx.style().visuals.dark_mode;
+            if is_dark_mode {
+                app.set_dark_mode();
+            } else {
+                app.set_light_mode();
+            }
+            Box::new(app)
+        }),
     ).expect("TODO: panic message");
 }
